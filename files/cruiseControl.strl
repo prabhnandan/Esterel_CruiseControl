@@ -1,0 +1,200 @@
+module cruiseControl:
+
+input On, Off,Resume, Set, QuickAccel, QuickDecel;
+input Accel : float;
+input Brake: float;
+input Speed: float;
+
+output CruiseSpeed:float;
+output CruiseState: integer;
+output ThrottleCmd: float;
+
+signal state : integer  in 
+	[loop
+		present state then
+			emit CruiseState(?state);
+		end present;
+		pause;
+	end loop]
+	||
+	run CruiseStateControl[	signal On/On1;
+								signal Off/Off1;
+								signal Resume/Resume1;
+								signal Accel/Accel1;
+								signal Brake/Brake1;
+								signal Speed/Speed1;
+								signal state/CruiseState1
+								]
+	||
+	run CruiseSpeedController[	signal Set/Set2;
+							   		signal QuickDecel/QuickDecel2;
+									signal QuickAccel/QuickAccel2;
+									signal state/CruiseState2;
+									signal Speed/Speed2;
+									signal CruiseSpeed/CruiseSpeed2
+									]
+	||
+	run ThrottleCmdController[	signal state/CruiseState3;
+									signal CruiseSpeed/CruiseSpeed3;
+									signal Accel/Accel3;
+									signal Speed/Speed3;
+									signal ThrottleCmd/ThrottleCmd3
+									]								
+end signal
+end module
+
+module CruiseStateControl:
+
+input On1, Off1,Resume1;
+input Accel1 : float;
+input Brake1: float;
+input Speed1: float;
+
+constant PedalsMin : float;
+constant SpeedMax : float;
+constant SpeedMin : float;
+
+%CruiseState : OFF(1), ON(2), DISABLE(4), STDBY(3)
+output CruiseState1 : integer;
+
+var state := 1:integer in
+    loop
+        emit CruiseState1(state);
+        pause;
+        trap T in
+            if state = 1 then
+                present On1 then
+                    state := 2;
+                end present;
+            end if;
+            
+            if state = 2 then
+            	present Off1 then
+            		state := 1; exit T;
+            	end present;
+            	if ?Brake1 > PedalsMin then
+            		state := 3; exit T;
+            	end if;
+            	if (?Accel1 > PedalsMin) or (?Speed1 > SpeedMax) or (?Speed1 < SpeedMin) then
+            		state := 4; exit T;
+            	end if;
+            end if;
+            if state = 3 then
+            	present Off1 then
+            		state := 1; exit T;
+            	end present;
+            	if (?Brake1 < PedalsMin) then
+            	present Resume1 then
+					if (?Accel1 < PedalsMin) and (?Speed1 < SpeedMax) and (?Speed1 > SpeedMin) then
+            			state := 2; exit T;
+            		end if;
+            		if (?Accel1 > PedalsMin)	or (?Speed1 > SpeedMax) or (?Speed1 < SpeedMin) then
+            			state := 4; exit T;
+            		end if;
+            	end present;
+            	end if;
+            end if;
+            if state = 4 then
+            	present Off1 then
+            		state := 1; exit T;
+            	end present;
+            	if ?Brake1 > PedalsMin then
+            	    state := 3; exit T;
+                end if;
+            	if (?Accel1 < PedalsMin) and (?Speed1 < SpeedMax) and (?Speed1 > SpeedMin) then
+            		state := 2; exit T;
+            	end if;
+            end if;
+        end trap
+    end loop
+end var
+
+end module
+
+
+module CruiseSpeedController:
+
+input Set2, QuickAccel2, QuickDecel2;
+input Speed2: float;
+input CruiseState2:integer;
+
+constant SpeedMin : float;
+constant SpeedMax : float;
+constant SpeedInc : float;
+constant Zero:float;
+
+
+output CruiseSpeed2: float;
+
+var currentSpeed := Zero : float in
+	
+	loop
+        pause;
+		if ?CruiseState2 = 2 then
+			currentSpeed := ?Speed2;
+			signal offState in
+				weak abort
+				loop 
+					trap T in
+						if ?CruiseState2 = 1 then
+							currentSpeed := Zero;
+							emit offState;
+							exit T;
+						end if;
+						if ?CruiseState2 > 2 then
+							currentSpeed := Zero;
+							exit T;
+						end if;
+						if ?CruiseState2 = 2 then
+							present Set2 then
+								currentSpeed := ?Speed2;
+							end present;
+							present QuickAccel2 then
+								currentSpeed := currentSpeed + SpeedInc;
+							end present;
+							present QuickDecel2 then
+								currentSpeed := currentSpeed - SpeedInc;
+							end present;
+							if currentSpeed < SpeedMin then
+								currentSpeed := SpeedMin;
+							end if;
+							if currentSpeed > SpeedMax then
+								currentSpeed := SpeedMax;
+							end if;
+							exit T;
+						end if;
+					end trap;
+					emit CruiseSpeed2(currentSpeed);
+					pause;
+				end loop
+			when offState;
+			end signal
+		else
+			emit CruiseSpeed2(Zero);
+		end if;
+	end loop
+end var
+
+end module
+
+module ThrottleCmdController:
+
+input CruiseState3: integer;
+input CruiseSpeed3: float;
+input Accel3: float;
+input Speed3: float;
+
+output ThrottleCmd3: float;
+
+function regulateThrottle(integer, float, float): float;
+loop
+	if ((?CruiseState3 = 2) and pre(?CruiseState3) = 1) then
+		emit ThrottleCmd3(regulateThrottle(1, ?CruiseSpeed3, ?Speed3));
+	elsif ?CruiseState3 = 2 then
+		emit ThrottleCmd3(regulateThrottle(0, ?CruiseSpeed3, ?Speed3));
+	else 
+		emit ThrottleCmd3(?Accel3);
+	end if;
+	pause;
+end loop;
+end module
