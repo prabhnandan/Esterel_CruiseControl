@@ -17,7 +17,7 @@ signal state : integer  in
 		pause;
 	end loop]
 	||
-	run CruiseStateControl[	signal On/On1;
+	run CruiseStateController[	signal On/On1;
 								signal Off/Off1;
 								signal Resume/Resume1;
 								signal Accel/Accel1;
@@ -43,7 +43,7 @@ signal state : integer  in
 end signal
 end module
 
-module CruiseStateControl:
+module CruiseStateController:
 
 input On1, Off1,Resume1;
 input Accel1 : float;
@@ -129,7 +129,6 @@ output CruiseSpeed2: float;
 var currentSpeed := Zero : float in
 	
 	loop
-        pause;
 		if ?CruiseState2 = 2 then
 			currentSpeed := ?Speed2;
 			signal offState in
@@ -142,7 +141,7 @@ var currentSpeed := Zero : float in
 							exit T;
 						end if;
 						if ?CruiseState2 > 2 then
-							currentSpeed := Zero;
+							emit CruiseSpeed2(Zero);
 							exit T;
 						end if;
 						if ?CruiseState2 = 2 then
@@ -161,10 +160,10 @@ var currentSpeed := Zero : float in
 							if currentSpeed > SpeedMax then
 								currentSpeed := SpeedMax;
 							end if;
+							emit CruiseSpeed2(currentSpeed);
 							exit T;
 						end if;
 					end trap;
-					emit CruiseSpeed2(currentSpeed);
 					pause;
 				end loop
 			when offState;
@@ -172,6 +171,7 @@ var currentSpeed := Zero : float in
 		else
 			emit CruiseSpeed2(Zero);
 		end if;
+		pause;
 	end loop
 end var
 
