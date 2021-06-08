@@ -1,13 +1,13 @@
-module cruiseControl:
+module CruiseControl:
 
-input On, Off,Resume, Set, QuickAccel, QuickDecel;
+input On, Off, Resume, Set, QuickAccel, QuickDecel;
 input Accel : float;
-input Brake: float;
-input Speed: float;
+input Brake : float;
+input Speed : float;
 
-output CruiseSpeed:float;
-output CruiseState: integer;
-output ThrottleCmd: float;
+output CruiseSpeed : float;
+output CruiseState : integer;
+output ThrottleCmd : float;
 
 signal state : integer  in 
 	[loop
@@ -45,16 +45,16 @@ end module
 
 module CruiseStateController:
 
-input On1, Off1,Resume1;
+input On1, Off1, Resume1;
 input Accel1 : float;
-input Brake1: float;
-input Speed1: float;
+input Brake1 : float;
+input Speed1 : float;
 
 constant PedalsMin : float;
-constant SpeedMax : float;
-constant SpeedMin : float;
+constant SpeedMax  : float;
+constant SpeedMin  : float;
 
-%CruiseState : OFF(1), ON(2), DISABLE(4), STDBY(3)
+%CruiseState : OFF(1), ON(2), STDBY(3), DISABLE(4)
 output CruiseState1 : integer;
 
 var state := 1:integer in
@@ -115,13 +115,13 @@ end module
 module CruiseSpeedController:
 
 input Set2, QuickAccel2, QuickDecel2;
-input Speed2: float;
-input CruiseState2:integer;
+input Speed2       : float;
+input CruiseState2 : integer;
 
 constant SpeedMin : float;
 constant SpeedMax : float;
 constant SpeedInc : float;
-constant Zero:float;
+constant Zero     : float;
 
 
 output CruiseSpeed2: float;
@@ -179,14 +179,14 @@ end module
 
 module ThrottleCmdController:
 
-input CruiseState3: integer;
-input CruiseSpeed3: float;
-input Accel3: float;
-input Speed3: float;
+input CruiseState3  : integer;
+input CruiseSpeed3  : float;
+input Accel3        : float;
+input Speed3        : float;
 
 output ThrottleCmd3: float;
 
-function regulateThrottle(integer, float, float): float;
+function regulateThrottle(integer, float, float) : float;
 loop
 	if ((?CruiseState3 = 2) and pre(?CruiseState3) = 1) then
 		emit ThrottleCmd3(regulateThrottle(1, ?CruiseSpeed3, ?Speed3));

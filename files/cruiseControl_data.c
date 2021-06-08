@@ -2,9 +2,9 @@
 
 /*
 DESCRIPTION: Saturate the throttle command to limit the acceleration.
-PARAMETERS: throttleIn - throttle input
-            saturate - true if saturated, false otherwise
-RETURNS: throttle output (ThrottleCmd)
+PARAMETERS:  throttleIn - throttle input
+             saturate   - true if saturated, false otherwise
+RETURNS:     throttle output (ThrottleCmd)
 */
 float saturateThrottle(float throttleIn, bool* saturate)
 {
@@ -25,10 +25,11 @@ float saturateThrottle(float throttleIn, bool* saturate)
 
 /*
 DESCRIPTION: Saturate the throttle command to limit the acceleration.
-PARAMETERS: isGoingOn - true if the cruise control has just gone into the ON state 
-                        from another state; false otherwise
-            saturate - true if saturated, false otherwise
-RETURNS: throttle output (ThrottleCmd)
+PARAMETERS:  isGoingOn    - true if the cruise control has just gone into the ON state 
+                            from another state; false otherwise
+             cruiseSpeed  - the value of the car's speed as determined by the Cruise Control System
+	     vehicleSpeed - the car's current speed 
+RETURNS:     throttle output (ThrottleCmd)
 */
 float regulateThrottle(bool isGoingOn, float cruiseSpeed, float vehicleSpeed)
 {
